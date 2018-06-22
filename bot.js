@@ -145,32 +145,32 @@ client.on('message', message => {
 
 
 
-client.on('message', msg => {
-  //////y a
-  if(msg.content.startsWith('^suggest')) {
-    if(!msg.channel.guild) return msg.reply('** هاذا الامر فقط للسيرفرات**');
-    if(!msg.guild.channels.find('name', 'suggestions')) return msg.reply('**الرجاء إضافة روم بإسم (suggestions)**');
-    let args = msg.content.split(" ").slice(1);
-    if(!args[1]) return msg.reply('الرجاء كتابة الاقتراح')
-    //غيره على حسب اسم روم الاقتراحات او سوي مثل اسم الروم الموجود هنا
-    if(msg.guild.channels.find('name', 'suggestions')) {
-      //غيره هنا كمان اذا غيرت فوق
-      msg.guild.channels.find('name', 'suggestions').send(`
-      تم الاقتراح من قبل : ${msg.member}
 
-      الاقتراح : 
-      ${args.join(" ").split(msg.mentions.members.first()).slice(' ')}
-      `)
-      .then(function (message) {
-        message.react('✅')
-        message.react('❌')
-      })
-      }
-    }
 
+
+
+
+
+
+clien.on('messge', message => {
+       if(message.content == 'p1'){
+           message.react('🔊')} return;
+    const ytdl = require('ytdl-core');
+      const stram0ptions = { seek: 0, volume:100};
+      const broadcast = 
+clien.createVoiceBroadcast();
+
+
+
+
+message.gulid.member(message.author).voiceChannel.join()
+       .then(connection => {
+           const stream = ytdl('https://www.youtube.com/watch?v=dfnCAmr569k' ,{ filter : 'audioonly' });
+           broadcast.playstream(stream);
+           const dispatcher = connection.playBroadcast(broadcast);
+       })
+.catch(console.error);
 });
-
-
 
    
 
