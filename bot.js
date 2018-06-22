@@ -137,11 +137,38 @@ case "^play":
 
 
 
+client.on('message', message => {
+    if(message.content === 'السلام عليكم'){
+        message.channel.send('وعليكم السلام ')
+    }
+});
 
 
 
+client.on('message', msg => {
+  //////y a
+  if(msg.content.startsWith('^suggest')) {
+    if(!msg.channel.guild) return msg.reply('** هاذا الامر فقط للسيرفرات**');
+    if(!msg.guild.channels.find('name', 'suggestions')) return msg.reply('**الرجاء إضافة روم بإسم (suggestions)**');
+    let args = msg.content.split(" ").slice(1);
+    if(!args[1]) return msg.reply('الرجاء كتابة الاقتراح')
+    //غيره على حسب اسم روم الاقتراحات او سوي مثل اسم الروم الموجود هنا
+    if(msg.guild.channels.find('name', 'suggestions')) {
+      //غيره هنا كمان اذا غيرت فوق
+      msg.guild.channels.find('name', 'suggestions').send(`
+      تم الاقتراح من قبل : ${msg.member}
 
+      الاقتراح : 
+      ${args.join(" ").split(msg.mentions.members.first()).slice(' ')}
+      `)
+      .then(function (message) {
+        message.react('✅')
+        message.react('❌')
+      })
+      }
+    }
 
+});
 
 
 
