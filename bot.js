@@ -144,34 +144,6 @@ client.on('message', message => {
 });
 
 
-
-
-
-
-
-
-
-
-clien.on('messge', message => {
-       if(message.content == 'p1'){
-           message.react('🔊')} return;
-    const ytdl = require('ytdl-core');
-      const stram0ptions = { seek: 0, volume:100};
-      const broadcast = 
-clien.createVoiceBroadcast();
-
-
-
-
-message.gulid.member(message.author).voiceChannel.join()
-       .then(connection => {
-           const stream = ytdl('https://www.youtube.com/watch?v=dfnCAmr569k' ,{ filter : 'audioonly' });
-           broadcast.playstream(stream);
-           const dispatcher = connection.playBroadcast(broadcast);
-       })
-.catch(console.error);
-});
-
    
 
 
