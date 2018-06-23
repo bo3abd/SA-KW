@@ -17,41 +17,59 @@ client.on('message', message => {
   
 
 
-  client.on("message", message =>{
-  if (!message.content.startsWith(prefix)) return;
-
-  var args = message.content.split(' ').slice(1);
-  var argresult = args.join(' ');
-  if (!message.author.id == 415649344864387072) return;
-
-if (message.content.startsWith(prefix + 'setply')) {
-  client.user.setGame(argresult);
-    message.channel.sendMessage(`**${argresult}** تم تغير الحاله الى`)
-} else
-
-if (message.content.startsWith(prefix + 'stream')) {
-  client.user.setGame(argresult, "https://www.twitch.tv/vvrrk");
-    message.channel.sendMessage(`**${argresult}** تم تغير الحاله الى`)
-} else
-
-if (message.content.startsWith(prefix + 'name')) {
-  client.user.setUsername(argresult).then
-      message.channel.sendMessage(`**${argresult}** تم تغير الاسم الى  `)
-  return message.reply("**لا يمكنك تغير الاسم الى بعد ساعتين **");
-} else
-if (message.content.startsWith(prefix + 'pic')) {
-  client.user.setAvatar(argresult);
-    message.channel.sendMessage(`**${argresult}** : تم تغير الصوره الى`);
-}
-  if (message.content.startsWith(prefix + 'watching')) {
-  if (message.author.id !== '415649344864387072') return message.reply('**لا يمكن تغير الحاله**')
-      client.user.setActivity(argresult, {type : 'cc'});
-   message.channel.sendMessage(`**${argresult}** : تم تغير الحاله الى`)
-  }
   
-   });
-   
-   
+  
+
+
+
+
+const developers = ["415649344864387072","346675179948212225",""]
+const adminprefixe = "^";
+client.on('message', message => {
+    var argresult = message.content.split(` `).slice(1).join(' ');
+      if (!developers.includes(message.author.id)) return;
+      
+  if (message.content.startsWith(adminprefix + 'ply')) {
+    client.user.setGame(argresult);
+      message.channel.send(`**✅   ${argresult}**`)
+  } else 
+     if (message.content === (adminprefix + "leave")) {
+    message.guild.leave();        
+  } else  
+  if (message.content.startsWith(adminprefix + 'wt')) {
+  client.user.setActivity(argresult, {type:'WATCHING'});
+      message.channel.send(`**✅   ${argresult}**`)
+  } else 
+  if (message.content.startsWith(adminprefix + 'ls')) {
+  client.user.setActivity(argresult , {type:'LISTENING'});
+      message.channel.send(`**✅   ${argresult}**`)
+  } else 
+  if (message.content.startsWith(adminprefix + 'st')) {
+    client.user.setGame(argresult, "https://www.twitch.tv/abdalazizzz");
+      message.channel.send(`**✅**`)
+  }
+  if (message.content.startsWith(adminprefix + 'setname')) {
+  client.user.setUsername(argresult).then
+      message.channel.send(`Changing The Name To ..**${argresult}** `)
+} else
+if (message.content.startsWith(adminprefix + 'setavatar')) {
+  client.user.setAvatar(argresult);
+    message.channel.send(`Changing The Avatar To :**${argresult}** `);
+}
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
