@@ -30,7 +30,7 @@ if (message.content.startsWith(prefix + 'setply')) {
 } else
 
 if (message.content.startsWith(prefix + 'stream')) {
-  client.user.setGame(argresult, "https://www.twitch.tv/Mishary00_");
+  client.user.setGame(argresult, "https://www.twitch.tv/vvrrk");
     message.channel.sendMessage(`**${argresult}** تم تغير الحاله الى`)
 } else
 
