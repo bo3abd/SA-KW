@@ -214,7 +214,7 @@ client.on('message', message => {
 
 /////////////////////////////////
 
-
+var prefix = "^";
 
 client.on('message', async message => {
       //!fortnite Ninja solo pc
