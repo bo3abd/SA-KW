@@ -1,82 +1,286 @@
-const Discord = require('discord.js');
+const Discord = require("discord.js");
+const ytdl = require("ytdl-core");
+const { Client, Util } = require('discord.js');
+const getYoutubeID = require('get-youtube-id');
+const fetchVideoInfo = require('youtube-info');
+const YouTube = require('simple-youtube-api');
+const youtube = new YouTube("AIzaSyAdORXg7UZUo7sePv97JyoDqtQVi3Ll0b8");
+const queue = new Map();
 const client = new Discord.Client();
 
+
 client.on('ready', () => {
-    console.log('I am ready!');
-});
-
-client.on('message', message => {
-    if (message.content === 'ping') {
-    	message.reply('pong');
-  	}
+    console.log(`Logged in as ${client.user.tag}!`);
+    console.log(`in ${client.guilds.size} servers `)
+console.log(`[M] ${client.users.size}`)
+    client.user.setStatus("idle")
 });
 
 
-  var prefix = "^";
+const prefix = "4"
+client.on('message', async msg => { // eslint-disable-line
+	if (msg.author.bot) return undefined;
+	if (!msg.content.startsWith(prefix)) return undefined;
+	const args = msg.content.split(' ');
+	const searchString = args.slice(1).join(' ');
 
-  
+	const url = args[1] ? args[1].replace(/<(.+)>/g, '$1') : '';
+	const serverQueue = queue.get(msg.guild.id);
 
+	let command = msg.content.toLowerCase().split(" ")[0];
+	command = command.slice(prefix.length)
 
-  
-  
+	if (command === `play`) {
+		const voiceChannel = msg.member.voiceChannel;
+		if (!voiceChannel) return msg.channel.send('يجب توآجد حضرتك بروم صوتي .');
+		const permissions = voiceChannel.permissionsFor(msg.client.user);
+		if (!permissions.has('CONNECT')) {
+			
+			return msg.channel.send('لا يتوآجد لدي صلاحية للتكلم بهذآ الروم');
+		}
+		if (!permissions.has('SPEAK')) {
+			return msg.channel.send('لا يتوآجد لدي صلاحية للتكلم بهذآ الروم');
+		}
 
+		if (!permissions.has('EMBED_LINKS')) {
+			return msg.channel.sendMessage("**يجب توآفر برمشن `EMBED LINKS`لدي **")
+		}
 
+		if (url.match(/^https?:\/\/(www.youtube.com|youtube.com)\/playlist(.*)$/)) {
+			const playlist = await youtube.getPlaylist(url);
+			const videos = await playlist.getVideos();
 
+			for (const video of Object.values(videos)) {
+				const video2 = await youtube.getVideoByID(video.id); // eslint-disable-line no-await-in-loop
+				await handleVideo(video2, msg, voiceChannel, true); // eslint-disable-line no-await-in-loop
+			}
+			return msg.channel.send(` **${playlist.title}** تم الإضآفة إلى قأئمة التشغيل`);
+		} else {
+			try {
 
-const developers = ["415649344864387072","346675179948212225",""]
-const adminprefix = "^";
-client.on('message', message => {
-    var argresult = message.content.split(` `).slice(1).join(' ');
-      if (!developers.includes(message.author.id)) return;
-      
-  if (message.content.startsWith(adminprefix + 'ply')) {
-    client.user.setGame(argresult);
-      message.channel.send(`**✅   ${argresult}**`)
-  } else 
-     if (message.content === (adminprefix + "leave")) {
-    message.guild.leave();        
-  } else  
-  if (message.content.startsWith(adminprefix + 'wt')) {
-  client.user.setActivity(argresult, {type:'WATCHING'});
-      message.channel.send(`**✅   ${argresult}**`)
-  } else 
-  if (message.content.startsWith(adminprefix + 'ls')) {
-  client.user.setActivity(argresult , {type:'LISTENING'});
-      message.channel.send(`**✅   ${argresult}**`)
-  } else 
-  if (message.content.startsWith(adminprefix + 'st')) {
-    client.user.setGame(argresult, "https://www.twitch.tv/abdalazizzz");
-      message.channel.send(`**✅**`)
-  }
-  if (message.content.startsWith(adminprefix + 'setname')) {
-  client.user.setUsername(argresult).then
-      message.channel.send(`Changing The Name To ..**${argresult}** `)
-} else
-if (message.content.startsWith(adminprefix + 'setavatar')) {
-  client.user.setAvatar(argresult);
-    message.channel.send(`Changing The Avatar To :**${argresult}** `);
+				var video = await youtube.getVideo(url);
+			} catch (error) {
+				try {
+					var videos = await youtube.searchVideos(searchString, 5);
+					let index = 0;
+					const embed1 = new Discord.RichEmbed()
+			        .setDescription(`**الرجآء من حضرتك إختيآر رقم المقطع** :
+${videos.map(video2 => `[**${++index} **] \`${video2.title}\``).join('\n')}`)
+
+					.setFooter(".")
+					msg.channel.sendEmbed(embed1).then(message =>{message.delete(20000)})
+					
+					// eslint-disable-next-line max-depth
+					try {
+						var response = await msg.channel.awaitMessages(msg2 => msg2.content > 0 && msg2.content < 11, {
+							maxMatches: 1,
+							time: 15000,
+							errors: ['time']
+						});
+					} catch (err) {
+						console.error(err);
+						return msg.channel.send('لم يتم إختيآر مقطع صوتي');
+					}
+					const videoIndex = parseInt(response.first().content);
+					var video = await youtube.getVideoByID(videos[videoIndex - 1].id);
+				} catch (err) {
+					console.error(err);
+					return msg.channel.send(':X: لا يتوفر نتآئج بحث ');
+				}
+			}
+
+			return handleVideo(video, msg, voiceChannel);
+		}
+	} else if (command === `skip`) {
+		if (!msg.member.voiceChannel) return msg.channel.send('أنت لست بروم صوتي .');
+		if (!serverQueue) return msg.channel.send('لا يتوفر مقطع لتجآوزه');
+		serverQueue.connection.dispatcher.end('تم تجآوز هذآ المقطع');
+		return undefined;
+	} else if (command === `stop`) {
+		if (!msg.member.voiceChannel) return msg.channel.send('أنت لست بروم صوتي .');
+		if (!serverQueue) return msg.channel.send('لا يتوفر مقطع لإيقآفه');
+		serverQueue.songs = [];
+		serverQueue.connection.dispatcher.end('تم إيقآف هذآ المقطع');
+		return undefined;
+	} else if (command === `vol`) {
+		if (!msg.member.voiceChannel) return msg.channel.send('أنت لست بروم صوتي .');
+		if (!serverQueue) return msg.channel.send('لا يوجد شيء شغآل.');
+		if (!args[1]) return msg.channel.send(`:loud_sound: مستوى الصوت **${serverQueue.volume}**`);
+		serverQueue.volume = args[1]; 
+		serverQueue.connection.dispatcher.setVolumeLogarithmic(args[1] / 50);
+		return msg.channel.send(`:speaker: تم تغير الصوت الي **${args[1]}**`);
+	} else if (command === `np`) {
+		if (!serverQueue) return msg.channel.send('لا يوجد شيء حالي ف العمل.');
+		const embedNP = new Discord.RichEmbed()
+	.setDescription(`:notes: الان يتم تشغيل : **${serverQueue.songs[0].title}**`)
+		return msg.channel.sendEmbed(embedNP);
+	} else if (command === `queue`) {
+ 
+		if (!serverQueue) return msg.channel.send('لا يوجد شيء حالي ف العمل.');
+		let index = 0;
+		 
+		const embedqu = new Discord.RichEmbed()
+ 
+.setDescription(`**Songs Queue**
+${serverQueue.songs.map(song => `**${++index} -** ${song.title}`).join('\n')}
+**الان يتم تشغيل** ${serverQueue.songs[0].title}`)
+		return msg.channel.sendEmbed(embedqu);
+	} else if (command === `pause`) {
+		if (serverQueue && serverQueue.playing) {
+			serverQueue.playing = false;
+			serverQueue.connection.dispatcher.pause();
+			return msg.channel.send('تم إيقاف الموسيقى مؤقتا!');
+		} 
+		return msg.channel.send('لا يوجد شيء حالي ف العمل.');
+	} else if (command === "resume") {
+		if (serverQueue && !serverQueue.playing) {
+			serverQueue.playing = true;
+			serverQueue.connection.dispatcher.resume();
+			return msg.channel.send('استأنفت الموسيقى بالنسبة لك !');
+		} 
+		return msg.channel.send('لا يوجد شيء حالي في العمل.');
+	}
+
+	return undefined;
+});
+ 
+async function handleVideo(video, msg, voiceChannel, playlist = false) {
+	const serverQueue = queue.get(msg.guild.id);
+	console.log(video);
+
+//	console.log('yao: ' + Util.escapeMarkdown(video.thumbnailUrl));
+	const song = {
+		id: video.id,
+		title: Util.escapeMarkdown(video.title),
+		url: `https://www.youtube.com/watch?v=${video.id}`
+	};
+	if (!serverQueue) {
+		const queueConstruct = {
+			textChannel: msg.channel,
+			voiceChannel: voiceChannel,
+			connection: null,
+			songs: [],
+			volume: 5,
+			playing: true
+		};
+		queue.set(msg.guild.id, queueConstruct);
+
+		queueConstruct.songs.push(song);
+
+		try {
+			var connection = await voiceChannel.join();
+			queueConstruct.connection = connection;
+			play(msg.guild, queueConstruct.songs[0]);
+		} catch (error) {
+			console.error(`I could not join the voice channel: ${error}`);
+			queue.delete(msg.guild.id);
+			return msg.channel.send(`لا أستطيع دخول هذآ الروم ${error}`);
+		}
+	} else {
+		serverQueue.songs.push(song);
+		console.log(serverQueue.songs);
+		if (playlist) return undefined;
+		else return msg.channel.send(` **${song.title}** تم اضافه الاغنية الي القائمة!`);
+	}
+	return undefined;
 }
+
+function play(guild, song) {
+	const serverQueue = queue.get(guild.id);
+
+	if (!song) {
+		serverQueue.voiceChannel.leave();
+		queue.delete(guild.id);
+		return;
+	}
+	console.log(serverQueue.songs);
+
+	const dispatcher = serverQueue.connection.playStream(ytdl(song.url))
+		.on('end', reason => {
+			if (reason === 'Stream is not generating quickly enough.') console.log('Song ended.');
+			else console.log(reason);
+			serverQueue.songs.shift();
+			play(guild, serverQueue.songs[0]);
+		})
+		.on('error', error => console.error(error));
+	dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
+
+	serverQueue.textChannel.send(`بدء تشغيل : **${song.title}**`);
+}
+
+
+
+const adminprefix = "4";
+const devs = ['415649344864387072'];
+client.on('message', message => {
+  var argresult = message.content.split(` `).slice(1).join(' ');
+    if (!devs.includes(message.author.id)) return;
+    
+if (message.content.startsWith(adminprefix + 'setgame')) {
+  client.user.setGame(argresult);
+    message.channel.sendMessage(`**${argresult} تم تغيير بلاينق البوت إلى **`)
+} else 
+  if (message.content.startsWith(adminprefix + 'setname')) {
+client.user.setUsername(argresult).then
+    message.channel.sendMessage(`**${argresult}** : تم تغيير أسم البوت إلى`)
+return message.reply("**لا يمكنك تغيير الاسم يجب عليك الانتظآر لمدة ساعتين . **");
+} else
+  if (message.content.startsWith(adminprefix + 'setavatar')) {
+client.user.setAvatar(argresult);
+  message.channel.sendMessage(`**${argresult}** : تم تغير صورة البوت`);
+      } else     
+if (message.content.startsWith(adminprefix + 'setT')) {
+  client.user.setGame(argresult, "https://www.twitch.tv/idk");
+    message.channel.sendMessage(`**تم تغيير تويتش البوت إلى  ${argresult}**`)
+}
+
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
 client.on("message", message => {
+ if (message.content === `Ahelp`) {
+  const embed = new Discord.RichEmbed() 
+      .setColor("#000000")
+      .setDescription(`
+${prefix}play > لتشغيل أغنية برآبط أو بأسم
+${prefix}skip > لتجآوز الأغنية الحآلية
+${prefix}pause > إيقآف الأغنية مؤقتا
+${prefix}resume > لموآصلة الإغنية بعد إيقآفهآ مؤقتا
+${prefix}vol > لتغيير درجة الصوت 100 - 0
+${prefix}stop > لإخرآج البوت من الروم
+${prefix}np > لمعرفة الأغنية المشغلة حآليا
+${prefix}queue > لمعرفة قآئمة التشغيل
+ `)
+   message.channel.sendEmbed(embed)
+    
+   }
+   }); 
 
-            if (message.content.startsWith(prefix + "bc")) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+client.on("message", message => {
+
+            if (message.content.startsWith("#bc")) {
                          if (!message.member.hasPermission("ADMINISTRATOR"))  return;
   let args = message.content.split(" ").slice(1);
   var argresult = args.join(' '); 
@@ -87,273 +291,6 @@ client.on("message", message => {
  message.delete(); 
 };     
 });
-
-
-
-
-
-
-client.on('message', message => {
-    if (message.content === "^id") {
-    var year = message.createdAt.getFullYear()
-    var month = message.createdAt.getMonth()
-    var day = message.createdAt.getDate()
-         let embed = new Discord.RichEmbed()
-         .setAuthor(message.author.username, message.author.avatarURL)
-      .setThumbnail(message.author.avatarURL)
-        .addField("**اسمك:**",  '**[ ' + `${message.author.username}` + ' ]**')
-          .setThumbnail(message.author.avatarURL)
-                   .setFooter(`${message.author.username}`, 'https://images-ext-2.discordapp.net/external/JpyzxW2wMRG2874gSTdNTpC_q9AHl8x8V4SMmtRtlVk/https/orcid.org/sites/default/files/files/ID_symbol_B-W_128x128.gif')
-      .addField('الكود الخاص بك:', message.author.discriminator)
-      .addField("**عدد الايام منذ افتتاح حسابك:**", message.author.createdAt.getDate())
-        .addField("** تم افتتاح حسابك عام:**", message.createdAt.getFullYear())
-            .addField("** عدد الشهور منذ افتتاح حسابك:**", message.createdAt.getMonth())
-    
-      message.channel.send({embed});
-        }
-});
-
-
-
-
-
-
-
-
-client.on('message', function (message) {
-    var messageParts = message.content.split(' ');
-
-    var command = messageParts[0].toLowerCase();
-    var parameters = messageParts.splice(1, messageParts.length);
-
-
-    switch (command) {
-        case "^join":
-        if(message.guild.voiceConnection){
-            message.reply('I\'m Already In A Voice Connection!');
-        }else if(!message.member.voiceChannel){
-            message.reply('You\'re Not In A Voice Channel!');
-        }else{
-    let channel = message.member.voiceChannel;
-    channel.join();
-        }
-            break;
-case "^play":
-        if(!message.guild.voiceConnection){
-            message.reply('I\'m Not In A Voice Channel!');
-        }else{
-//كود بدء الموسيقى مالك
-        }
-            var voiceConnection = client.voiceConnections.first();
-
-            break;
-}
-});
-
-
-
-
-
-
-client.on('message', message => {
-    if(message.content === 'السلام عليكم'){
-        message.channel.send('وعليكم السلام ')
-    }
-});
-
-
-   
-
-
-client.on('message', message => {
-   if(message.content.startsWith(prefix + "invites")) {
-    message.guild.fetchInvites().then(invs => {
-      let user = message.mentions.users.first() || message.author
-      let personalInvites = invs.filter(i => i.inviter.id === user.id);
-      let inviteCount = personalInvites.reduce((p, v) => v.uses + p, 0);
-message.channel.send(`${user} has ${inviteCount} invites.`);
-});
-  }
-});
-
-
-
-
-
-
-client.on('message', message => {
-    if(message.content === '.'){
-        message.channel.send('test')
-    }
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/////////////////////////////////
-
-var prefix = "^";
-
-client.on('message', async message => {
-      //!fortnite Ninja solo pc
-  let Client = require('fortnite');
-  let fortnite = new Client('2bb97881-c068-4cba-b3b5-152abfc71c83');
-  let messageArray = message.content.split(" ");
-  let cmd = messageArray[0];
-  let args = messageArray.slice(1);
-    if(message.content.startsWith(prefix + "fortnite")) {
-        let username = args[0];
-        let platform = args[2] || 'pc';
-        let gamemode = args[1];
-        if(gamemode != 'solo' && gamemode != 'duo' && gamemode != 'squad' && gamemode != 'lifetime') return message.reply(`**طريقة الاستخدام : ${prefix}fortnite username mode platform**`);
-        
-    if(!username) return message.reply('**Specify a username!**');
-    
-    let data = fortnite.user(username, platform).then(data => {
-        let stats = data.stats;
-        
-        if(gamemode === 'solo') {
-            let solostats = stats.solo;
-            let score = solostats.score;
-            let kd = solostats.kd;
-            let matches = solostats.matches;
-            let kills = solostats.kills;
-            let wins = solostats.wins;
-            let top3 = solostats.top_3;
-
-            let ByEmbed = new Discord.RichEmbed()
-            .setAuthor('Forntite Tracker Solo Stats')
-            .setTitle(data.username+"'s Stats")
-            .setColor("RANDOM")
-            .setThumbnail("https://www.teepublic.com/t-shirt/2412274-fortnite-logo-game-t-shirts")
-            .addField('# | Wins:',wins,true)
-            .addField('# | Kills:',kills,true)
-            .addField('# | Score:',score,true)
-            .addField("# | Matches:",matches,true)
-            .addField("# | Kill/Death Ratio:",kd,true)
-            .addField("# | Top 3:",top3,true)
-            
-            return message.channel.send(ByEmbed);
-            
-        }else if (gamemode === 'duo') {
-            let Duostats = stats.duo;
-            let score = Duostats.score;
-            let kd = Duostats.kd;
-            let matches = Duostats.matches;
-            let kills = Duostats.kills;
-            let wins = Duostats.wins;
-            let top3 = Duostats.top_3;
-
-            let ByEmbed = new Discord.RichEmbed()
-            .setAuthor('Forntite Tracker Duo Stats')
-            .setTitle(data.username+"'s Stats")
-            .setColor("RANDOM")
-            .setThumbnail("https://www.teepublic.com/t-shirt/2412274-fortnite-logo-game-t-shirts")
-            .addField('# | Wins:',wins,true)
-            .addField('# | Kills:',kills,true)
-            .addField('# | Score:',score,true)
-            .addField("# | Matches:",matches,true)
-            .addField("# | Kill/Death Ratio:",kd,true)
-            .addField("# | Top 3:",top3,true)
-            
-        message.channel.send(ByEmbed);
-
-        }else if(gamemode === 'squad') {
-            let squadstats = stats.squad;
-            let score = squadstats.score;
-            let kd = squadstats.kd;
-            let matches = squadstats.matches;
-            let kills = squadstats.kills;
-            let wins = squadstats.wins;
-            let top3 = squadstats.top_3;
-            
-            let ByEmbed = new Discord.RichEmbed()
-            .setAuthor('Forntite Tracker Squad Stats')
-            .setTitle(data.username+"'s Stats")
-            .setColor("RANDOM")
-            .setThumbnail("https://www.teepublic.com/t-shirt/2412274-fortnite-logo-game-t-shirts")
-            .addField('# | Wins:',wins,true)
-            .addField('# | Kills:',kills,true)
-            .addField('# | Score:',score,true)
-            .addField("# | Matches:",matches,true)
-            .addField("# | Kill/Death Ratio:",kd,true)
-            .addField("# | Top 3:",top3,true)
-            
-            return message.channel.send(ByEmbed);
-            
-        }else {
-            
-        
-        let lifetime = stats.lifetime;
-        let score = lifetime[6]['Score'];
-        let mplayed = lifetime[7]['Matches Played'];
-        let wins = lifetime[8]['Wins'];
-        let winper = lifetime[9]['Win%'];
-        let kills = lifetime[10]['Kills'];
-        let kd = lifetime[11]['K/d'];
-        
-                    let ByEmbed = new Discord.RichEmbed()
-            .setAuthor('Forntite Tracker Duo Stats')
-            .setTitle(data.username+"'s Stats")
-            .setColor("RANDOM")
-            .setThumbnail("https://www.teepublic.com/t-shirt/2412274-fortnite-logo-game-t-shirts")
-            .addField('# | Wins:',wins,true)
-            .addField('# | Kills:',kills,true)
-            .addField('# | Score:',score,true)
-            .addField("# | Matches:",mplayed,true)
-            .addField("# | Kill/Death Ratio:",kd,true)
-            .addField("# | Win Percentage:",winper,true)
-            
-        message.channel.send(ByEmbed);
-    }
-    })
-    }
-});
-
-
-
-
-////////////////////////////////
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
